@@ -1,104 +1,125 @@
-from collections import deque
-import copy
+# ================================================================
+# GENERADOR DE MÁSCARAS BINARIAS EN FORMATO TIPO:
+# PC[i]=int('xxxxxxxxxxxxx',2)
+# E[i] =int('xxxxxxxxxxxxx',2)
+# A[i] =int('xxxxxxxxxxxxx',2)
+# ================================================================
 
-# -----------------------
-# Estado inicial y final
-# -----------------------
-estado_inicial = [
-    [1, 2 ,3 ,4],  # Columna 1
-    [],
-    []
+# -----------------------------------------------------------
+# 1. DEFINICIÓN DEL MAPEADO DE PREDICADOS → POSICIÓN DE BIT
+# -----------------------------------------------------------
+# (Puedes cambiar aquí los predicados y sus bits)
+
+PREDICADOS = {
+    # bit : etiqueta
+    12: "On(A,B)",
+    11: "On(B,A)",
+    10: "OnTable(A,0)",
+    9:  "OnTable(A,1)",
+    8:  "OnTable(A,2)",
+    7:  "OnTable(B,0)",
+    6:  "OnTable(B,1)",
+    5:  "OnTable(B,2)",
+    4:  "Clear(A)",
+    3:  "Clear(B)",
+    2:  "ClearCol(0)",
+    1:  "ClearCol(1)",
+    0:  "ClearCol(2)",
+}
+
+# predicado ⇒ máscara binaria
+BIT = { name: (1 << bit) for bit, name in PREDICADOS.items() }
+
+
+# -----------------------------------------------------------
+# 2. DEFINICIÓN DE PLANTILLAS DE ACCIONES PARAMÉTRICAS
+# -----------------------------------------------------------
+
+ACCIONES_PARAMETRICAS = [
+
+    # ------------------------- PickUp -------------------------
+    ("PickUp", ["A","B"], [0,1,2],
+     lambda x, c: {
+         "PC": [f"Clear({x})", f"OnTable({x},{c})", f"ClearCol({c})"],
+         "E":  [f"OnTable({x},{c})"],
+         "A":  []              # sin bit de Holding
+     }),
+
+    # ------------------------- PutDown -------------------------
+    ("PutDown", ["A","B"], [0,1,2],
+     lambda x, c: {
+         "PC": [f"ClearCol({c})"],
+         "E":  [],
+         "A":  [f"OnTable({x},{c})"]
+     }),
+
+    # ------------------------- Stack x sobre y -------------------------
+    ("Stack", ["A","B"], ["A","B"], [0,1,2],
+     lambda x, y, c: {} if x==y else {
+         "PC": [f"Clear({y})", f"ClearCol({c})"],
+         "E":  [f"Clear({y})"],
+         "A":  [f"On({x},{y})"]
+     }),
+
+    # ------------------------- Unstack x de sobre y -------------------------
+    ("Unstack", ["A","B"], ["A","B"], [0,1,2],
+     lambda x, y, c: {} if x==y else {
+         "PC": [f"On({x},{y})", f"Clear({x})"],
+         "E":  [f"On({x},{y})"],
+         "A":  [f"Clear({y})"]
+     }),
 ]
 
-estado_final = [
-    [],
-    [],
-    [4,3,2,1]
-]
+# -----------------------------------------------------------
+# 3. MOTOR GENERADOR
+# -----------------------------------------------------------
 
-# -----------------------
-# Función para serializar un estado (para comprobar ciclos)
-# -----------------------
-def serializar(estado):
-    return tuple(tuple(pila) for pila in estado)
+def lista_a_mascara(lista_predicados):
+    m = 0
+    for p in lista_predicados:
+        if p in BIT:
+            m |= BIT[p]
+    return m
 
-# -----------------------
-# Generar movimientos válidos desde un estado
-# -----------------------
-def generar_acciones(estado):
-    acciones = []
-    for i, pila in enumerate(estado):
-        if not pila:
-            continue
-        bloque = pila[-1]  # Solo bloque superior se puede mover
-        for j, destino in enumerate(estado):
-            if i == j:
-                continue
-            acciones.append((i, j, bloque))
-    return acciones
+op = 0
+resultados = []
 
-# -----------------------
-# Aplicar acción
-# -----------------------
-def aplicar_accion(estado, accion):
-    i, j, bloque = accion
-    nuevo_estado = copy.deepcopy(estado)
-    nuevo_estado[i].pop()
-    nuevo_estado[j].append(bloque)
-    return nuevo_estado
+for entry in ACCIONES_PARAMETRICAS:
 
-# -----------------------
-# BFS para encontrar solución
-# -----------------------
-cola = deque()
-cola.append((estado_inicial, []))  # (estado, secuencia de acciones)
-visitados = set()
-visitados.add(serializar(estado_inicial))
+    # detectamos número de argumentos según longitud de la tupla
+    if len(entry) == 4:
+        nombre, args1, args2, fn = entry
+        for x in args1:
+            for c in args2:
+                dic = fn(x,c)
+                if not dic: continue
+                PC = lista_a_mascara(dic["PC"])
+                E  = lista_a_mascara(dic["E"])
+                A  = lista_a_mascara(dic["A"])
+                resultados.append( (op, nombre, (x,c), PC, E, A) )
+                op += 1
 
-solucion = None
+    elif len(entry) == 5:
+        nombre, args1, args2, args3, fn = entry
+        for x in args1:
+            for y in args2:
+                for c in args3:
+                    dic = fn(x,y,c)
+                    if not dic: continue
+                    PC = lista_a_mascara(dic["PC"])
+                    E  = lista_a_mascara(dic["E"])
+                    A  = lista_a_mascara(dic["A"])
+                    resultados.append( (op, nombre, (x,y,c), PC, E, A) )
+                    op += 1
 
-while cola:
-    estado_actual, acciones_realizadas = cola.popleft()
 
-    if estado_actual == estado_final:
-        solucion = acciones_realizadas
-        break
+# -----------------------------------------------------------
+# 4. IMPRIMIR RESULTADO EN FORMATO EXACTO DE TU EJEMPLO
+# -----------------------------------------------------------
 
-    for accion in generar_acciones(estado_actual):
-        nuevo_estado = aplicar_accion(estado_actual, accion)
-        s = serializar(nuevo_estado)
-        if s not in visitados:
-            visitados.add(s)
-            cola.append((nuevo_estado, acciones_realizadas + [accion]))
-
-# -----------------------
-# Función para mostrar el estado gráficamente
-# -----------------------
-def mostrar_estado(estado):
-    max_altura = max(len(col) for col in estado)
-    columnas = len(estado)
-    print("\nEstado actual:")
-    for nivel in reversed(range(max_altura)):
-        fila = ""
-        for col in range(columnas):
-            if nivel < len(estado[col]):
-                fila += f" {estado[col][nivel]} "
-            else:
-                fila += " . "
-        print(fila)
-    print("---" * columnas)
-
-# -----------------------
-# Mostrar solución y estado final
-# -----------------------
-if solucion:
-    print("SOLUCIÓN ENCONTRADA:")
-    estado_temp = copy.deepcopy(estado_inicial)
-    mostrar_estado(estado_temp)
-    for idx, acc in enumerate(solucion):
-        i,j,bloque = acc
-        print(f"Paso {idx+1}: Mover bloque {bloque} de columna {i+1} a columna {j+1}")
-        estado_temp = aplicar_accion(estado_temp, acc)
-        mostrar_estado(estado_temp)
-else:
-    print("No se encontró solución")
+for op_id, nom, params, PC, E, A in resultados:
+    print("#----------------------------------------------------")
+    print(f"# {nom}{params} op={op_id}")
+    print(f"PC[{op_id}] = int('{PC:013b}', 2)")
+    print(f"E[{op_id}]  = int('{E:013b}', 2)")
+    print(f"A[{op_id}]  = int('{A:013b}', 2)")
