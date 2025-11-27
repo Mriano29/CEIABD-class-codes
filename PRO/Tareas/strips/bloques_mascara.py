@@ -1,7 +1,7 @@
 
 import numpy as np
 
-max_profundidad = 5  # Inteligencia del mono
+max_profundidad = 5  # Inteligencia del algoritmo
 max_operaciones = 36  # número de operaciones distintas
 estado = np.zeros(max_profundidad, dtype=int)  # Pila de estados
 operaciones = np.zeros(max_profundidad, dtype=int)  # Pila de operaciones
@@ -13,44 +13,8 @@ E = np.zeros(max_operaciones, dtype=int)
 # Lista de propiedades a Añadir de cada acción
 A = np.zeros(max_operaciones, dtype=int)
 
-texto = [
-    "Ir(B1,3,4)",  # 0
-    "Ir(B1,3,5)",  # 1
-    "Ir(B1,3,1)",  # 2
-    "Ir(B1,3,2)",  # 3
-    "Ir(B1,4,3)",  # 4
-    "Ir(B1,4,5)",  # 5
-    "Ir(B1,4,0)",  # 6
-    "Ir(B1,4,2)",  # 7
-    "Ir(B1,5,3)",  # 8
-    "Ir(B1,5,4)",  # 9
-    "Ir(B1,5,0)",  # 10
-    "Ir(B1,5,1)",  # 11
-    "Ir(B1,0,4)",  # 12
-    "Ir(B1,0,5)",  # 13
-    "Ir(B1,2,4)",  # 14
-    "Ir(B1,2,3)",  # 15
-    "Ir(B1,1,3)",  # 16
-    "Ir(B1,1,5)",  # 17
-    "Ir(B2,3,4)",  # 18
-    "Ir(B2,3,5)",  # 19
-    "Ir(B2,3,1)",  # 20
-    "Ir(B2,3,2)",  # 21
-    "Ir(B2,4,3)",  # 22
-    "Ir(B2,4,5)",  # 23
-    "Ir(B2,4,0)",  # 24
-    "Ir(B2,4,2)",  # 25
-    "Ir(B2,5,3)",  # 26
-    "Ir(B2,5,4)",  # 27
-    "Ir(B2,5,0)",  # 28
-    "Ir(B2,5,1)",  # 29
-    "Ir(B2,0,4)",  # 30
-    "Ir(B2,0,5)",  # 31
-    "Ir(B2,2,4)",  # 32
-    "Ir(B2,2,3)",  # 33
-    "Ir(B2,1,3)",  # 34
-    "Ir(B2,1,5)"   # 35
-]
+texto = ["Ir(B1,3,4)", "Ir(B1,3,5)", "Ir(B1,3,1)", "Ir(B1,3,2)", "Ir(B1,4,3)", "Ir(B1,4,5)", "Ir(B1,4,0)", "Ir(B1,4,2)", "Ir(B1,5,3)", "Ir(B1,5,4)", "Ir(B1,5,0)", "Ir(B1,5,1)", "Ir(B1,0,4)", "Ir(B1,0,5)", "Ir(B1,2,4)", "Ir(B1,2,3)", "Ir(B1,1,3)", "Ir(B1,1,5)",
+         "Ir(B2,3,4)", "Ir(B2,3,5)", "Ir(B2,3,1)", "Ir(B2,3,2)", "Ir(B2,4,3)", "Ir(B2,4,5)", "Ir(B2,4,0)", "Ir(B2,4,2)", "Ir(B2,5,3)", "Ir(B2,5,4)", "Ir(B2,5,0)", "Ir(B2,5,1)", "Ir(B2,0,4)", "Ir(B2,0,5)", "Ir(B2,2,4)", "Ir(B2,2,3)", "Ir(B2,1,3)", "Ir(B2,1,5)"]
 
 
 # Definición de operaciones
@@ -262,78 +226,45 @@ vectorInicial = [4, 1]
 vectorFinal = [3, 6]
 
 
-def mascaraInicio():
+def generar_mascara(vector):
     mascara = ''
-    if (vectorInicial[0] == 1):
+    if (vector[0] == 1):
         mascara = "100000"  # Está(M,1)
-    if (vectorInicial[0] == 2):
+    if (vector[0] == 2):
         mascara = "010000"  # Está(M,2)
-    if (vectorInicial[0] == 3):
+    if (vector[0] == 3):
         mascara = "001000"  # Está(M,3)
-    if (vectorInicial[0] == 4):
+    if (vector[0] == 4):
         mascara = "000100"  # Está(M,1)
-    if (vectorInicial[0] == 5):
+    if (vector[0] == 5):
         mascara = "000010"  # Está(M,2)
-    if (vectorInicial[0] == 6):
+    if (vector[0] == 6):
         mascara = "000001"  # Está(M,3)
-    if (vectorInicial[1] == 1):
+    if (vector[1] == 1):
         mascara += "100000"  # Está(M,1)
-    if (vectorInicial[1] == 2):
+    if (vector[1] == 2):
         mascara += "010000"  # Está(M,2)
-    if (vectorInicial[1] == 3):
+    if (vector[1] == 3):
         mascara += "001000"  # Está(M,3)
-    if (vectorInicial[1] == 4):
+    if (vector[1] == 4):
         mascara += "000100"  # Está(M,1)
-    if (vectorInicial[1] == 5):
+    if (vector[1] == 5):
         mascara += "000010"  # Está(M,2)
-    if (vectorInicial[1] == 6):
+    if (vector[1] == 6):
         mascara += "000001"  # Está(M,3)
     return mascara
 
-
-def mascaraFin():
-    mascara = ''
-    if (vectorFinal[0] == 1):
-        mascara = "100000"  # Está(M,1)
-    if (vectorFinal[0] == 2):
-        mascara = "010000"  # Está(M,2)
-    if (vectorFinal[0] == 3):
-        mascara = "001000"  # Está(M,3)
-    if (vectorFinal[0] == 4):
-        mascara = "000100"  # Está(M,1)
-    if (vectorFinal[0] == 5):
-        mascara = "000010"  # Está(M,2)
-    if (vectorFinal[0] == 6):
-        mascara = "000001"  # Está(M,3)
-    if (vectorFinal[1] == 1):
-        mascara += "100000"  # Está(M,1)
-    if (vectorFinal[1] == 2):
-        mascara += "010000"  # Está(M,2)
-    if (vectorFinal[1] == 3):
-        mascara += "001000"  # Está(M,3)
-    if (vectorFinal[1] == 4):
-        mascara += "000100"  # Está(M,1)
-    if (vectorFinal[1] == 5):
-        mascara += "000010"  # Está(M,2)
-    if (vectorFinal[1] == 6):
-        mascara += "000001"  # Está(M,3)
-    return mascara
-
+# -------------------------------------------------------------------------------------------------------
 
 def intentar(nodo, op):
     # Cumple las PC para aplicar la op
     if (int(bin(nodo & PC[op]), 2) == int(bin(PC[op]), 2)):
-        # print(bin(estado), "cumple con:",bin(PC[op]), texto[op])
         sigu = int(bin(nodo & E[op]), 2)  # Eliminamos propiedades E
-        # print("Eliminamos ",bin(E[op])," y queda:",bin(siguiente))
         sigu = int(bin(sigu | A[op]), 2)  # Añade propiedades A
-        # print("Añadimos ",bin(A[op])," y queda:",bin(siguiente))
-        # print(texto[op],'->',end=""
     else:
         sigu = -1
     return sigu
 # -------------------------------------------------------------------------------------------------------
-
 
 def encontrado(siguiente):
     # Aquí comprobamos que no hemos pasado por ese estado
@@ -348,14 +279,12 @@ def encontrado(siguiente):
 
 # -------------------------------------------------------------------------------------------------------
 
-
 # Estado inicial con la secuencia binaria de propiedades
-inicial = int(mascaraInicio(), 2)
-# meta=   int('0000100100101' , 2 ) # Está(C,2)Está(P,2)Sobre(M,C)Tiene(M,P)
-meta = int(mascaraFin(), 2)
+inicial = int(generar_mascara(vectorInicial), 2)
+meta = int(generar_mascara(vectorFinal), 2)
 # Lista para guardar la secuencia de la solución
 solucion_acciones = []
-
+# Pilas para el DFS
 top = 0
 estado[top] = inicial
 operaciones[top] = 0
@@ -377,7 +306,7 @@ while top >= 0:
         op += 1
 
     if int(bin(actual & meta), 2) == int(bin(meta), 2):
-        # Solo mostramos la tabla de la solución final
+        # Mostramos la tabla de la solución final
         print("Tabla de acciones de la solución:")
         print(
             f"{'Estado':12} | {'Accion':15} | {'PC':12} | {'E':12} | {'Resultado':12}")
