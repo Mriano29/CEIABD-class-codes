@@ -256,6 +256,7 @@ def generar_mascara(vector):
 
 # -------------------------------------------------------------------------------------------------------
 
+
 def intentar(nodo, op):
     # Cumple las PC para aplicar la op
     if (int(bin(nodo & PC[op]), 2) == int(bin(PC[op]), 2)):
@@ -265,6 +266,7 @@ def intentar(nodo, op):
         sigu = -1
     return sigu
 # -------------------------------------------------------------------------------------------------------
+
 
 def encontrado(siguiente):
     # Aquí comprobamos que no hemos pasado por ese estado
@@ -278,7 +280,6 @@ def encontrado(siguiente):
 
 
 # -------------------------------------------------------------------------------------------------------
-
 # Estado inicial con la secuencia binaria de propiedades
 inicial = int(generar_mascara(vectorInicial), 2)
 meta = int(generar_mascara(vectorFinal), 2)
@@ -291,39 +292,46 @@ operaciones[top] = 0
 op = 0
 actual = inicial
 
-while top >= 0:
-    while (op < max_operaciones) and (top < max_profundidad - 1) and (actual != meta):
+while (top >= 0):
+    while ((op < max_operaciones) and (top < max_profundidad-1) and (actual != meta)):
         siguiente = intentar(actual, op)
-        if siguiente != -1 and not encontrado(siguiente):
-            # Guardamos la acción en la secuencia temporal
-            solucion_acciones.append((actual, op, siguiente))
-
-            top += 1
-            estado[top] = actual
-            operaciones[top] = op
-            actual = siguiente
-            op = -1
+        if (siguiente != -1):
+            if (not (encontrado(siguiente))):
+                top += 1
+                estado[top] = actual
+                operaciones[top] = op
+                actual = siguiente
+                op = -1
         op += 1
+    if (int(bin(actual & meta), 2) == int(bin(meta), 2)):
+        print("SOLUCIÓN:")
+        print("\n| Estado        | Acción                 | PC            | E             | Resultado       |")
+        print("|---------------|------------------------|---------------|---------------|-----------------|")
 
-    if int(bin(actual & meta), 2) == int(bin(meta), 2):
-        # Mostramos la tabla de la solución final
-        print("Tabla de acciones de la solución:")
+        temp = inicial
         print(
-            f"{'Estado':12} | {'Accion':15} | {'PC':12} | {'E':12} | {'Resultado':12}")
-        print("-"*70)
-        for estado_act, op_index, resultado in solucion_acciones:
+            f"| {format(temp,'012b')} | {'-':<22} | {'-'*13} | {'-'*13} | {format(temp,'012b')} |")
+
+        t = 1
+        while (t <= top):
+            op_idx = operaciones[t]
+            accion_texto = texto[op_idx]
+            pc_mask = format(PC[op_idx], '012b')
+            e_mask = format(E[op_idx], '012b')
+            a_mask = format(A[op_idx], '012b')
+            siguiente = intentar(temp, op_idx)
+            res_mask = format(siguiente, '012b')
             print(
-                f"{format(estado_act,'012b')} | {texto[op_index]:15} | {format(PC[op_index],'012b')} | {format(E[op_index],'012b')} | {format(resultado,'012b')}")
+                f"| {format(temp,'012b')} | {accion_texto:<22} | {pc_mask} | {e_mask} | {res_mask} |")
 
-        # Mostramos la secuencia de la solución
-        print("\nSOLUCIÓN:")
-        print(" --> ".join([texto[op_index]
-              for _, op_index, _ in solucion_acciones]))
+            temp = siguiente
+            t += 1
+        t = 1
+        while (t < top):
+            print(texto[operaciones[t]], "-->", end='')
+            t += 1
+        print(texto[operaciones[t]], end='')
         top = 0
-
     actual = estado[top]
-    op = operaciones[top] + 1
+    op = operaciones[top]+1
     top -= 1
-    # Limpiamos la secuencia temporal si retrocedemos
-    if top < len(solucion_acciones) - 1:
-        solucion_acciones = solucion_acciones[:top+1]
