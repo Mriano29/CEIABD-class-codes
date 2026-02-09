@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <XMI xmi.version="2.1" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1" xmlns:uml="http://www.omg.org/spec/UML/20090901">
+  <uml:Model xmi:type="uml:Model" name="UMLModel">
+    <packagedElement xmi:type="uml:Class" name="Persona">
+      <ownedAttribute visibility="+" name="nombre" type="String" />
+    </packagedElement>
+    <packagedElement xmi:type="uml:Class" name="Alumno">
+      <ownedAttribute visibility="+" name="id" type="int" />
+    </packagedElement>
+    <packagedElement xmi:type="uml:Class" name="Grupo">
+      <ownedAttribute visibility="+" name="nombre" type="" />
+    </packagedElement>
+    <packagedElement xmi:type="uml:Generalization" memberEnd="Alumno Persona">
+    </packagedElement>
+    <packagedElement xmi:type="uml:Composition" memberEnd="Grupo Alumno">
+      <ownedEnd type="Grupo" multiplicity1="1" />
+      <ownedEnd type="Alumno" multiplicity2="30" />
+    </packagedElement>
+  </uml:Model>
+</XMI>

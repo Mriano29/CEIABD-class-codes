@@ -207,6 +207,52 @@ def extract_aggregations(root):
                     })
     return aggregations
 
+def extract_directed_compositions(root, class_dict):
+    obj_id=1
+    directed_compositions = []
+    for elem in root.findall('.//packagedElement'):
+        type_attr = elem.get('{http://schema.omg.org/spec/XMI/2.1}type')
+        if type_attr == 'uml:DirectedComposition':
+            member_end = elem.get('memberEnd')
+            if member_end:
+                whole, part = member_end.split()
+                owned_ends = elem.findall('ownedEnd')
+                multiplicity_whole = None
+                multiplicity_part = None
+                for owned_end in owned_ends:
+                    end_type = owned_end.get('type')
+                    if end_type == whole and multiplicity_whole == None:
+                        multiplicity_whole = owned_end.get('multiplicity1')
+                    if end_type == part and multiplicity_part == None:
+                        multiplicity_part = owned_end.get('multiplicity2')
+                       
+                if whole and part:
+                    directed_compositions.append({
+                        'type': 'directedComposition',
+                        'whole': whole,
+                        'part': part,
+                        'multiplicity1': multiplicity_whole,
+                        'multiplicity2': multiplicity_part
+                    })
+                    # Añadir atributo en la clase whole
+                    class_name = whole
+                    if class_name in class_dict:
+                        if multiplicity_part != "*":
+                            class_dict[class_name]['attributes'].append({
+                                'name': f'{part.lower()}List{obj_id}',
+                                'visibility': 'private',
+                                'type': f'{part}[]'
+                            })
+                            obj_id+=1
+                        else:
+                            class_dict[class_name]['attributes'].append({
+                                'name': f'{part.lower()}List{obj_id}',
+                                'visibility': 'private',
+                                'type': f'HashSet<{part}>'
+                            })
+                            obj_id+=1
+    return directed_compositions
+
 def generate_clips_facts(classes, relationships):
     clips_facts = []
 
@@ -218,6 +264,7 @@ def generate_clips_facts(classes, relationships):
     clips_facts.append('(deftemplate directedAssociation\n   (slot source)\n   (slot target)\n   (slot multiplicity1)\n  (slot multiplicity2))')
     clips_facts.append('(deftemplate association\n   (slot source)\n   (slot target)\n   (slot multiplicity1)\n  (slot multiplicity2))')
     clips_facts.append('(deftemplate composition\n   (slot whole)\n   (slot part)\n   (slot multiplicity))')
+    clips_facts.append('(deftemplate directedComposition\n   (slot whole)\n   (slot part)\n   (slot multiplicity1)\n  (slot multiplicity2))')
     clips_facts.append('(deftemplate aggregation\n   (slot whole)\n   (slot part)\n   (slot multiplicity))')
 
     clips_facts.append('(deffacts initial-facts')
@@ -257,6 +304,8 @@ def generate_clips_facts(classes, relationships):
             clips_facts.append(f'  (dependency (client {rel["client"]}) (supplier {rel["supplier"]}))')
         elif rel['type'] == 'composition':
             clips_facts.append(f'  (composition (whole {rel["whole"]}) (part {rel["part"]}) (multiplicity {rel["multiplicity"]}))')
+        elif rel['type'] == 'directedComposition':
+            clips_facts.append(f'  (directedComposition (whole {rel["whole"]}) (part {rel["part"]}) (multiplicity1 {rel["multiplicity1"]}) (multiplicity2 {rel["multiplicity2"]}))')
         elif rel['type'] == 'aggregation':
             clips_facts.append(f'  (aggregation (whole {rel["whole"]}) (part {rel["part"]}) (multiplicity {rel["multiplicity"]}))')
 
@@ -342,23 +391,24 @@ def write_clips_file(clips_facts, file_path):
 ##############################################################################            
 
 # Abre el archivo en modo lectura
-with open('diagram.xmi', 'r') as archivo:
+with open('MOD/Tareas/CLIPS_4.1/diagram.xmi', 'r') as archivo:
     xmi_data = archivo.read()
 
 # Archivo de salida CLIPS
 clips_file = 'output.clp'
 
 try:
-    root = parse_xmi('diagram.xmi')
+    root = parse_xmi('MOD/Tareas/CLIPS_4.1/diagram.xmi')
     classes, class_dict = extract_classes(root)
     generalizations = extract_generalizations(root)
     directed_associations = extract_directed_associations(root, class_dict)
     associations = extract_associations(root)
     dependencies = extract_dependencies(root)
     compositions = extract_compositions(root)
+    directed_compositions = extract_directed_compositions(root, class_dict)
     aggregations = extract_aggregations(root)
     
-    relationships = generalizations + directed_associations + associations + dependencies + compositions + aggregations
+    relationships = generalizations + directed_associations + associations + dependencies + compositions + directed_compositions + aggregations
  
     clips_facts = generate_clips_facts(classes, relationships)
     write_clips_file(clips_facts, clips_file)
