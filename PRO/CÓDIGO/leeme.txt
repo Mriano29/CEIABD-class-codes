@@ -1,0 +1,145 @@
+Cómo ejecutarla
+
+Instala dependencias:
+
+pip install flask requests
+
+
+Ejecuta:
+
+python app.py
+
+
+Abre:
+
+http://127.0.0.1:5000
+
+Notas rápidas (por si algo falla)
+
+Asegúrate de que en LM Studio tienes Server activo y expone la API en 127.0.0.1:1234.
+
+Si cambias el modelo en LM Studio, puedes ajustar:
+
+set LMSTUDIO_MODEL=google/gemma-3-4b
+set LMSTUDIO_BASE_URL=http://127.0.0.1:1234/v1
+python app.py
+
+
+(en PowerShell sería $env:LMSTUDIO_MODEL="...")
+----------------------------------------------------------------
+
+
+AUDIO
+python -m pip install TTS
+mkdir static
+
+#############################
+
+la política de seguridad de PowerShell en Windows (muy típica en entornos educativos/administrativos).
+
+Vamos por partes.
+
+✅ OPCIÓN MÁS RÁPIDA (recomendada): activar solo para tu usuario
+
+Copia esto en PowerShell como tú mismo (no admin):
+
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+
+
+Cuando pregunte:
+
+Do you want to change the execution policy?
+
+
+Responde:
+
+Y
+ python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+👉 Esto NO rompe la seguridad del sistema: solo permite ejecutar scripts locales tuyos.
+
+Después vuelve a activar:
+
+.\.venv\Scripts\Activate.ps1
+
+
+Y verás:
+
+(.venv) PS C:\Users\Carlos\Desktop\chat-local>
+
+
+Eso significa que el entorno está activo.
+################
+
+Opción recomendada: crear un entorno con Python 3.11 (o 3.10) solo para este proyecto
+
+No tocas tu Python 3.13 si no quieres; solo usas 3.11 para el chat+TTS.
+
+1) Instala Python 3.11 (Windows)
+
+Descarga e instala Python 3.11.x desde la web oficial (marcando “Add to PATH”).
+(Esto sí requiere descarga externa; es lo normal.)
+
+2) Crea venv con Python 3.11
+
+En tu carpeta chat-local:
+
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+
+3) Instala dependencias
+pip install flask requests TTS
+mkdir static
+
+4) Ejecuta
+python app.py
+
+
+Con esto, tu app.py de Coqui funciona tal cual.
+
+###############################
+
+🥇 OPCIÓN A — Coqui TTS (100% local, open source)
+
+Es la mejor para FP/IA.
+
+Ventajas
+
+✅ Gratis
+✅ Offline
+✅ Python
+✅ Didáctico
+✅ Reproducible en clase
+
+Instalación
+pip install TTS
+
+
+(La primera vez descarga modelos.)
+
+Función TTS local
+
+Sustituye ElevenLabs por esto:
+
+from TTS.api import TTS
+
+# Cargar modelo una vez
+tts = TTS(model_name="tts_models/es/css10/vits", progress_bar=False, gpu=False)
+
+def local_tts(text):
+    fname = f"static/{uuid.uuid4().hex}.wav"
+    tts.tts_to_file(text=text, file_path=fname)
+    return "/" + fname
+
+
+Y en /send:
+
+audio_url = local_tts(answer)
+session["last_audio"] = audio_url
+
+Modelo en español ✔️
+tts_models/es/css10/vits
+
+
+Voz bastante decente.
