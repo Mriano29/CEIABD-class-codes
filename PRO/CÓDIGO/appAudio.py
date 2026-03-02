@@ -1,18 +1,24 @@
-
 # app.py
 from flask import Flask, request, session, redirect, url_for, render_template_string
 import requests
 import os
 import uuid
 from pathlib import Path
-
+from transformers import pipeline
+import soundfile as sf
+import torch
 from TTS.api import TTS  # Coqui TTS
 
-LMSTUDIO_BASE_URL = os.environ.get("LMSTUDIO_BASE_URL", "http://127.0.0.1:1234/v1")
+LMSTUDIO_BASE_URL = os.environ.get(
+    "LMSTUDIO_BASE_URL", "http://127.0.0.1:1234/v1")
 MODEL_ID = os.environ.get("LMSTUDIO_MODEL", "google/gemma-3-4b")
 
-# Modelo TTS en español (puedes cambiarlo más adelante)
+# Modelo TTS en español
 TTS_MODEL = os.environ.get("TTS_MODEL", "tts_models/es/css10/vits")
+
+# ASR Whisper
+ASR_BACKEND = os.environ.get("ASR_BACKEND", "hf")  # default: hf
+WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "openai/whisper-small")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key-change-me")
@@ -20,10 +26,34 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key-change-me")
 # Asegura carpeta static
 Path("PRO/CÓDIGO/static").mkdir(exist_ok=True)
 
-# Carga el modelo TTS UNA VEZ al arrancar (importante)
-# gpu=False para que sea sencillo y reproducible
+# Carga el modelo TTS UNA VEZ al arrancar
 tts = TTS(model_name=TTS_MODEL, progress_bar=False, gpu=False)
 
+# ASR (Whisper HF)
+asr = pipeline(
+    "automatic-speech-recognition",
+    model=WHISPER_MODEL,
+    generate_kwargs={"language": "spanish", "task": "transcribe"},
+)
+
+# Función para transcribir audio WAV sin ffmpeg
+
+
+def transcribe_audio(file_path: str) -> str:
+    try:
+        # Leer WAV
+        audio, sr = sf.read(file_path, dtype='float32') 
+        # Flatten si es stereo (Whisper HF espera mono)
+        if audio.ndim > 1:
+            audio = audio.mean(axis=1)
+        # Pasar array directamente al pipeline
+        result = asr(audio)
+        return result["text"]
+    except Exception as e:
+        return f"[Error ASR] {e}"
+
+
+# Resto de tu HTML (solo cambiamos accept del input a WAV)
 HTML = """
 <!doctype html>
 <html lang="es">
@@ -65,8 +95,15 @@ HTML = """
   {% endif %}
 
   <div class="row">
-    <form method="post" action="{{ url_for('send') }}">
+    <form method="post" action="{{ url_for('send') }}" enctype="multipart/form-data">
       <textarea name="prompt" placeholder="Escribe aquí..."></textarea>
+      <div style="margin-top:10px;">
+        <!-- Solo WAV -->
+        <input type="file" name="audio" accept=".wav,audio/wav" />
+        <button type="submit" formaction="{{ url_for('asr_endpoint') }}">
+          Enviar audio
+        </button>
+      </div>
       <div style="display:flex; gap:10px; margin-top:10px;">
         <button type="submit">Enviar</button>
         <button type="submit" formaction="{{ url_for('reset') }}">Reset</button>
@@ -81,6 +118,18 @@ HTML = """
 </body>
 </html>
 """
+
+# Función TTS
+
+
+def local_tts_to_wav(text: str) -> str:
+    fname = f"{uuid.uuid4().hex}.wav"
+    fpath = Path("PRO/CÓDIGO/static") / fname
+    tts.tts_to_file(text=text, file_path=str(fpath))
+    return f"/static/{fname}"
+
+# Función LM Studio
+
 
 def lmstudio_chat(messages, temperature=0.7, max_tokens=512):
     url = f"{LMSTUDIO_BASE_URL}/chat/completions"
@@ -97,19 +146,13 @@ def lmstudio_chat(messages, temperature=0.7, max_tokens=512):
     data = r.json()
     return data["choices"][0]["message"]["content"]
 
-def local_tts_to_wav(text: str) -> str:
-    """Genera un WAV en /static y devuelve la URL /static/xxxx.wav"""
-    fname = f"{uuid.uuid4().hex}.wav"
-    fpath = Path("PRO/CÓDIGO/static") / fname
-    tts.tts_to_file(text=text, file_path=str(fpath))
-    return f"/static/{fname}"
 
 @app.get("/")
 def index():
     if "messages" not in session:
-        session["messages"] = [{"role": "system", "content": "Eres un asistente útil y conciso."}]
+        session["messages"] = [
+            {"role": "system", "content": "Eres un asistente útil y conciso."}]
     visible = [m for m in session["messages"] if m["role"] != "system"]
-
     return render_template_string(
         HTML,
         messages=visible,
@@ -119,15 +162,59 @@ def index():
         last_audio=session.get("last_audio")
     )
 
+
 @app.post("/send")
 def send():
     prompt = (request.form.get("prompt") or "").strip()
     if not prompt:
         return redirect(url_for("index"))
-
-    session.setdefault("messages", [{"role": "system", "content": "Eres un asistente útil y conciso."}])
+    session.setdefault(
+        "messages", [{"role": "system", "content": "Eres un asistente útil y conciso."}])
     session["messages"].append({"role": "user", "content": prompt})
+    try:
+        answer = lmstudio_chat(session["messages"])
+    except requests.RequestException as e:
+        answer = f"[Error llamando a LM Studio] {e}"
+    session["messages"].append({"role": "assistant", "content": answer})
+    try:
+        session["last_audio"] = local_tts_to_wav(answer)
+    except Exception as e:
+        session["last_audio"] = None
+        session["messages"].append(
+            {"role": "assistant", "content": f"[Aviso TTS] No se pudo generar audio: {e}"})
+    session.modified = True
+    return redirect(url_for("index"))
 
+
+@app.post("/reset")
+def reset():
+    session["messages"] = [
+        {"role": "system", "content": "Eres un asistente útil y conciso."}]
+    session["last_audio"] = None
+    session.modified = True
+    return redirect(url_for("index"))
+
+@app.post("/asr")
+def asr_endpoint():
+    if "audio" not in request.files:
+        return "No se envió audio", 400
+
+    audio_file = request.files["audio"]
+    if audio_file.filename == "":
+        return "Archivo vacío", 400
+
+    fname = f"{uuid.uuid4().hex}.wav"
+    fpath = Path("PRO/CÓDIGO/static") / fname
+    audio_file.save(fpath)
+
+    # Transcribir WAV
+    text = transcribe_audio(str(fpath))
+
+    # Guardar transcripción en session
+    session.setdefault("messages", [{"role": "system", "content": "Eres un asistente útil y conciso."}])
+    session["messages"].append({"role": "user", "content": f"[Audio → texto] {text}"})
+
+    # Llamamos a LM Studio para que responda
     try:
         answer = lmstudio_chat(session["messages"])
     except requests.RequestException as e:
@@ -135,7 +222,7 @@ def send():
 
     session["messages"].append({"role": "assistant", "content": answer})
 
-    # Generación de audio local (Coqui)
+    # Generar TTS
     try:
         session["last_audio"] = local_tts_to_wav(answer)
     except Exception as e:
@@ -145,12 +232,6 @@ def send():
     session.modified = True
     return redirect(url_for("index"))
 
-@app.post("/reset")
-def reset():
-    session["messages"] = [{"role": "system", "content": "Eres un asistente útil y conciso."}]
-    session["last_audio"] = None
-    session.modified = True
-    return redirect(url_for("index"))
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
