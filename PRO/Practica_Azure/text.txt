@@ -1,0 +1,5 @@
+Tu: Como puedo armar un telefono movil
+Asistente: Solo puedo ayudarte con Python. Si tienes alguna pregunta relacionada con programación en Python, no dudes en consultarme. 😊
+[entrada=192 | respuesta=24 tokens]
+-------------------------------------------------------
+Tu:
