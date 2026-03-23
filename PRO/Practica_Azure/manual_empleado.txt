@@ -1,0 +1,18 @@
+MANUAL DE EMPLEADO — TECHCORP S.L.
+VACACIONES Y PERMISOS
+Los empleados tienen derecho a 23 dias laborables de vacaciones al anyo.
+Las vacaciones deben solicitarse con 15 dias de antelacion en el portal de RRHH.
+En el primer anyo los dias se calculan de forma proporcional a la incorporacion.
+Los permisos por enfermedad requieren justificante medico a partir del tercer dia.
+HORARIO Y TELETRABAJO
+El horario habitual es de 9:00 a 18:00 con una hora para comer.
+Existe flexibilidad de entrada entre las 8:00 y las 10:00.
+El teletrabajo esta permitido hasta 3 dias por semana con aprobacion del responsable.
+Los viernes se puede salir a las 15:00 en julio y agosto.
+EQUIPOS Y ACCESOS
+Cada empleado recibe un portatil al incorporarse.
+Las solicitudes de software se gestionan a traves de helpdesk@techcorp.es
+El acceso a sistemas de produccion requiere aprobacion del CTO.
+FORMACION
+Cada empleado tiene un presupuesto anual de 1.500 euros para formacion externa.
+Las certificaciones tecnicas aprobadas se reembolsan al 100%.
