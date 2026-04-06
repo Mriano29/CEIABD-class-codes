@@ -33,7 +33,7 @@
               <div class="mb-3">
                 <label for="celsius" class="form-label">Resultado</label>
                 <div id="resultado">
-                  0 grados celsius son 32 grados fahrenheit
+                  0 grados fahrenheit son 32 grados celsius
                 </div>
               </div>
             </form>
@@ -53,7 +53,7 @@
       //Cargar modelo
       (async () => {
           console.log("Cargando modelo...");
-          modelo = await tf.loadLayersModel("model.json");
+          modelo = await tf.loadGraphModel("model.json");
           console.log("Modelo cargado...");
       })();
 
@@ -67,7 +67,7 @@
           prediccion = Math.round(prediccion * 10) / 10;
           tensor.dispose();
           salida.dispose();
-          document.getElementById("resultado").innerHTML = celsius + " celsius son " + prediccion + " fahrenheit!";
+          document.getElementById("resultado").innerHTML = celsius + " farenheit son " + prediccion + " celsius!";
         } else {
           document.getElementById("resultado").innerHTML = "Intenta de nuevo en un momento...";
         }
